@@ -116,7 +116,7 @@ void runShell(char ** argv) {
     char *String = malloc(200);
     printf("Dat Bash $");
     while (scanf(" %199[^\n]s", String) && !feof(stdin)) {
-        if (strcmp(String, "quit" ) == 0) {
+        if (strcmp(String, "quit") == 0) {
             break;
         }
 
@@ -126,58 +126,60 @@ void runShell(char ** argv) {
         while (String[h] != ' ' && String[h] != 0) {
             h++;
         }
-        char * command = malloc(h+1);
+        char *command = malloc(h + 1);
         for (int l = 0; l < h; ++l) {
             command[l] = String[l];
         }
-        command[h] =0;
+        command[h] = 0;
 
 
         //find the longest path variable
         int lv = 0;
-        for (int i =0; argv[i] != NULL; i++) {
+        for (int i = 0; argv[i] != NULL; i++) {
             if (strlen(argv[i]) > lv) {
                 lv = strlen(argv[i]);
             }
         }
 
-        char * st = malloc(strlen(command) +2+ lv);
+        char *st = malloc(strlen(command) + 2 + lv);
 
 
-        for (int i =0; argv[i] != NULL; i++) {
-            char * a = malloc(strlen(argv[i]));
+        for (int i = 0; argv[i] != NULL; i++) {
+            char *a = malloc(strlen(argv[i]));
             for (int j = 0; j < strlen(argv[i]); j++) {
                 a[j] = argv[i][j];
             }
 
             //find the commands path
-            char * s = strcat(a, "/");
+            char *s = strcat(a, "/");
             st = strcat(s, command);
             printf("Checking %s\n", st);
-            if (file_exist (st)) {
+            if (file_exist(st)) {
                 printf("Found!\n");
                 break;
             }
         }
 
         //format the command's path
-        char ** parameters = parse(String, ' ');
-        int count =0;
+        char **parameters = parse(String, ' ');
+        int count = 0;
         for (int k = 0; parameters[k]; k++) {
             count++;
         }
         pointerPrint(parameters);
 
-        //run the command via fork
-        pid_t p;
-        int result = fork();
-        if (result == 0) {
-            p = getpid();
-            execv(st, parameters);
+        if (file_exist(st)) {
+            //run the command via fork
+            pid_t p;
+            int result = fork();
+            if (result == 0) {
+                p = getpid();
+                execv(st, parameters);
 
-        } else {
-            p = getpid();
-            wait(result);
+            } else {
+                p = getpid();
+                wait(result);
+            }
         }
         printf("Dat Bash $");
     }
