@@ -4,21 +4,20 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <stdint.h>
 #include <sys/types.h>    //found on stack overflow
 
 void pointerPrint(char ** argv);
-char ** getPath(char * fullpath);
 void runShell(char ** argv);
 char * findPathName(char ** argv);
 int file_exist (char *filename);
-char ** parse(char * c);
+char ** parse(char * c, char b);
 char * findPath(char ** envp);
+
 int main(int argc, char ** argv, char ** envp) {
     char *fullpath = findPath(envp);
-    //full path from environmental variable
-//    char * fullpath  = envp[20];
     //get the path variables
-    char ** path = getPath(fullpath);
+    char ** path = parse(fullpath, ':');
     pointerPrint(path);
 
     //Run shell
@@ -26,14 +25,20 @@ int main(int argc, char ** argv, char ** envp) {
 
     return 0;
 }
+
+/**
+ * Find the path from environment
+ */
 char * findPath(char ** envp) {
     int r = 0;
+    //search environmental variables
     for (int i = 0; envp[i] != NULL ; ++i) {
         char * p = malloc(5);
         for (int j = 0; j < 4; ++j) {
             p[j] = envp[i][j];
         }
         p[4] = 0;
+        //check if it's PATH
         if (strcmp(p, "PATH") ==0 ) {
             r = i;
             break;
@@ -43,40 +48,51 @@ char * findPath(char ** envp) {
 }
 
 /**
- * gets the path variables, taken from HW2
+ * parses the string based on the given char, stolen from HW2
  */
-char ** getPath(char * fullpath) {
-    int count =1;
+char ** parse(char * c, char b)
+{
+    //parsing the path does not require this sys out
+    if (b == ' ') {
+        printf("String = '%s'\n", c);
+    }
 
-    //count number of ':' or path variables
-    for (int i = 0; i < strlen(fullpath); ++i) {
-        if (fullpath[i] == ':') {
-            count+=1;
+    int pointers = 2;
+    for( int i =0;  i < strlen(c); i++) {
+        if(c[i] == b) {
+            pointers++;
         }
     }
 
-    //allocate memory
-    char ** path = malloc(count * sizeof(char *));
+    //parsing the path does not require this sys out
+    if (b == ' ') {
+        printf("Number of pointers = %i\n", pointers);
+    }
 
-    //place path variables within array
-    char * p = fullpath;
-    for (int i = 0; i < count; i++) {
+    char ** result = malloc(pointers * sizeof(int *));
+
+    char *letters = c;
+
+    for (int i = 0; i < pointers; i++) {
         int a =0;
-        while(p[a] != ':' && p[a] != 0) {
+        while(letters[a] != b && letters[a] != 0) {
             a++;
         }
-        path[i] = malloc(a+1);
+        result[i] = malloc(a+1);
         int count = 0;
-        while (p[0] != ':' && p[0] != 0) {
-            path[i][count] = p[0];
-            p++;
+        while (letters[0] != b && letters[0] != 0) {
+            result[i][count] = letters[0];
+            letters++;
             count++;
         }
-        path[i][count] = 0;
-        p++;
+
+        result[i][count] = 0;
+        letters++;
     }
 
-    return path;
+    result[pointers -1] = NULL;
+
+    return result;
 }
 
 /**
@@ -98,13 +114,15 @@ void runShell(char ** argv) {
 
     //loop
     char *String = malloc(200);
-//    while (!feof(stdin)) {
     printf("Dat Bash $");
-//    while (scanf(" %199[^\n]s", String) && String != 'quit') {
     while (scanf(" %199[^\n]s", String) && !feof(stdin)) {
-        //printf("Dat Bash $");
-//        scanf("%199[^\n]s", String);
+        if (strcmp(String, "quit" ) == 0) {
+            break;
+        }
+
         int h = 0;
+
+        //check command for parameter
         while (String[h] != ' ' && String[h] != 0) {
             h++;
         }
@@ -114,15 +132,25 @@ void runShell(char ** argv) {
         }
         command[h] =0;
 
-        char * st = malloc(20);
+
+        //find the longest path variable
+        int lv = 0;
+        for (int i =0; argv[i] != NULL; i++) {
+            if (strlen(argv[i]) > lv) {
+                lv = strlen(argv[i]);
+            }
+        }
+
+        char * st = malloc(strlen(command) +2+ lv);
+
 
         for (int i =0; argv[i] != NULL; i++) {
             char * a = malloc(strlen(argv[i]));
             for (int j = 0; j < strlen(argv[i]); j++) {
                 a[j] = argv[i][j];
             }
-            //strcpy( a, argv[i]);
-            //char * s = malloc(sizeof(char) * ((strlen(argv[i])) + 2));
+
+            //find the commands path
             char * s = strcat(a, "/");
             st = strcat(s, command);
             printf("Checking %s\n", st);
@@ -132,96 +160,34 @@ void runShell(char ** argv) {
             }
         }
 
-
-//        char ** parameters = parse(String);
-//        pointerPrint(parameters);
-//        char *const parmList[] = {"/bin/ls", NULL};
-
-        char ** parameters = parse(String);
+        //format the command's path
+        char ** parameters = parse(String, ' ');
         int count =0;
         for (int k = 0; parameters[k]; k++) {
             count++;
         }
         pointerPrint(parameters);
-//        char ** parmList = malloc(sizeof(char *) * (count+1));
-//        parmList[0] = st;
-//        for (int i = 0; parameters[i] != NULL; i++) {
-//            parmList[i+1] = parameters[i];
-//        }
-//        parmList[count + 2] = NULL;
-//        pointerPrint(parameters);
 
-        //find pathName
-
+        //run the command via fork
         pid_t p;
         int result = fork();
         if (result == 0) {
             p = getpid();
-//            printf("%s\n", st);
             execv(st, parameters);
-//            printf("child");
 
         } else {
             p = getpid();
             wait(result);
-
         }
-//        char *String = malloc(200);
         printf("Dat Bash $");
-        //String = malloc(200);
     }
 }
 
-char * findPathName(char ** argv) {
-
-}
-
+/**
+ * checks if a file exists
+ */
 int file_exist (char *filename) {
     struct stat   buffer;
     return (stat (filename, &buffer) == 0);
 }
 
-char ** parse(char * c)
-{
-
-    char ** result;
-    //TODO add code here!!
-
-
-    printf("String = '%s'\n", c);
-    int pointers = 0;
-    char *cfp = c;
-    for( int i =0;  i < strlen(c); i++) {
-        if(cfp[i] == ' ') {
-            pointers++;
-        }
-    }
-
-    pointers+=2;
-    printf("Number of pointers = %i\n", pointers);
-
-    result = malloc(pointers * sizeof(int *));
-
-    char *letters = c;
-
-    for (int i = 0; i < pointers; i++) {
-        int a =0;
-        while(letters[a] != ' ' && letters[a] != 0) {
-            a++;
-        }
-        result[i] = malloc(a+1);
-        int count = 0;
-        while (letters[0] != ' ' && letters[0] != 0) {
-            result[i][count] = letters[0];
-            letters++;
-            count++;
-        }
-
-        result[i][count] = 0;
-        letters++;
-    }
-
-    result[pointers -1] = NULL;
-
-    return result;
-}
