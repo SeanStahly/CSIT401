@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <sys/types.h>    //found on stack overflow
 
 void pointerPrint(char ** argv);
@@ -115,7 +116,9 @@ void runShell(char ** argv) {
     //loop
     char *String = malloc(200);
     printf("Dat Bash $");
-    while (scanf(" %199[^\n]s", String) && !feof(stdin)) {
+
+    //run shell
+    while (scanf(" %199[^\n]s", String)) {
         if (strcmp(String, "quit") == 0) {
             break;
         }
@@ -189,7 +192,10 @@ void runShell(char ** argv) {
  * checks if a file exists
  */
 int file_exist (char *filename) {
-    struct stat   buffer;
-    return (stat (filename, &buffer) == 0);
+    bool b = false;
+    if (access(filename, F_OK) != -1) {
+        b = true;
+    }
+    return b;
 }
 
