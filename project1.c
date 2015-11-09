@@ -177,10 +177,12 @@ void runShell(char ** argv) {
             int result = fork();
             if (result == 0) {
                 p = getpid();
+		printf("%schild\n", st);
                 execv(st, parameters);
 
             } else {
                 p = getpid();
+		printf("blargparent\n");
                 wait(result);
             }
         }
