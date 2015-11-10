@@ -12,7 +12,7 @@ void pointerPrint(char ** argv);
 void runShell(char ** argv);
 char * findPathName(char ** argv);
 int file_exist (char *filename);
-int files_exist (char **filenames);
+int files_exist (char **filenames, int pipes);
 char ** parse(char * c, char b);
 char * findPath(char ** envp);
 
@@ -122,6 +122,7 @@ void runShell(char ** argv) {
     int h;
     int g;
 
+
     char ** pipedCommands = parse(String, '|');
     int pipes =0;
     for (int i =0; i < strlen(String); i++) {
@@ -131,8 +132,10 @@ void runShell(char ** argv) {
     }
     // printf("pipes = %i\n", pipes);
 
-    char **st = malloc(sizeof(char *) * (pipes +1));
+    char **st = malloc((sizeof(char *)) * (pipes +1));
     char ***parameters = malloc(sizeof(char *) * (pipes +1));
+
+
 
     for(int i= 0; pipedCommands[i] != NULL; i++) {
       h =0;
@@ -141,48 +144,46 @@ void runShell(char ** argv) {
       while (pipedCommands[i][g] != '|' && pipedCommands[i][g] != 0) {
         g++;
       }
-      // printf("blarg %s\n", pipedCommands[i]);
-      // pointerPrint(pipedCommands);
+
       char ** commands = malloc(g+1);
 
       //check command for parameter
-      // while (String[h] != ' ' && String[h] != 0) {
-      //     h++;
-      // }
       while (pipedCommands[i][h] != ' ' && pipedCommands[i][h] != 0) {
         h++;
       }
-      // printf("h =%i\n", h);
       commands[i] = malloc(h + 1);
       for (int l = 0; l < h; ++l) {
         commands[i][l] = pipedCommands[i][l];
-        // printf("commands = %s\n",commands[i] );
       }
       commands[i][h] = 0;
 
-      // pointerPrint(commands);
-
       //find the longest path variable
       int lv = 0;
+      int envVariables =0;
       for (int j = 0; argv[j] != NULL; j++) {
         if (strlen(argv[j]) > lv) {
           lv = strlen(argv[j]);
+          envVariables++;
         }
       }
+
 
 
       st[i] = malloc(strlen(commands[i]) + 2 + lv);
 
       bool f = false;
+
       for (int k = 0; argv[k] != NULL; k++) {
-        char *a = malloc(strlen(argv[k]));
+
+
+        char *a = malloc(strlen(argv[k]) *envVariables);
         for (int j = 0; j < strlen(argv[k]); j++) {
           a[j] = argv[k][j];
         }
-
         //find the commands path
         char *s = strcat(a, "/");
         st[i] = strcat(s, commands[i]);
+
         if (file_exist(st[i])) {
           printf("Found \'%s\'!\n", st[i]);
           f = true;
@@ -190,8 +191,9 @@ void runShell(char ** argv) {
         }
       }
 
+      printf("that1");
       if(!f) {
-        printf("Command was not found.\n");
+        printf("\'%s\' was not found.\n", st[i]);
       }
 
       //format the command's path
@@ -257,20 +259,21 @@ void runShell(char ** argv) {
     //     }
     //   }
 
-    // if (files_exist(st)) {
+    printf("blarg");
+
+    if (files_exist(st, pipes)) {
       int i;
       pid_t result;
       int in, fd [2];
       in =0;
-      // result = fork();
-      // if (result == 0) {
+      result = fork();
+      if (result == 0) {
         /* code */
 
       for (i = 0; i < pipes; i++) {
         pipe(fd);
 
-        if ((result = fork()) ==0) {
-        // if (result ==0) {
+        if ((result=fork()) ==0) {
           if ((in != 0)) {
             dup2(in, 0);
             close(in);
@@ -282,8 +285,8 @@ void runShell(char ** argv) {
           }
 
           execv(st[i], parameters[i]);
-        // }else {
-        //   wait(&result);
+        }else {
+          wait(&result);
         }
 
         close(fd [1]);
@@ -293,21 +296,16 @@ void runShell(char ** argv) {
       if (in != 0) {
         dup2(in, 0);
       }
+      close(fd[0]);
 
-      // if ((result = fork()) == 0) {
-      //   execv(st[i], parameters[i]);
-      // } else {
-      //   wait(&result);
-      // }
       execv(st[i], parameters[i]);
-    // } else {
-    //   wait(&result);
-    //   }
-    // }
+    } else {
+      wait(&result);
+      }
+    }
 
 
     printf("Dat Bash $");
-    // }
   }
 
 }
@@ -323,10 +321,11 @@ int file_exist (char *filename) {
   return b;
 }
 
-int files_exist (char **filenames) {
+int files_exist (char **filenames, int pipes) {
   bool b = true;
-  for (int i = 0; filenames[i] != NULL; i++) {
-    if (access(filenames[i], F_OK) == -1) {
+  for (int i = 0; i < pipes+1; i++) {
+
+    if (!file_exist(filenames[i])) {
       b = false;
     }
   }
