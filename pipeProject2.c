@@ -176,7 +176,7 @@ void runShell(char ** argv) {
       for (int k = 0; argv[k] != NULL; k++) {
 
 
-        char *a = malloc(strlen(argv[k]) *envVariables);
+        char *a = malloc(strlen(argv[k]) * 10);
         for (int j = 0; j < strlen(argv[k]); j++) {
           a[j] = argv[k][j];
         }
@@ -191,7 +191,6 @@ void runShell(char ** argv) {
         }
       }
 
-      printf("that1");
       if(!f) {
         printf("\'%s\' was not found.\n", st[i]);
       }
@@ -202,108 +201,66 @@ void runShell(char ** argv) {
       for (int k = 0; parameters[i][k]; k++) {
         count++;
       }
-      // pointerPrint(parameters[i]);
 
     }
-    // pointerPrint(st);
 
-
-    // for (int i=0; st[i] != NULL; i++) {
-
-    // if(pipes ==0) {
-    //   if (file_exist(st[0])) {
-    //     // printf("%s\n", "hmm");
-    //     //run the command via fork
-    //     pid_t result;
-    //     result = fork();
-    //     if (result == 0) {
-    //       // printf("blarg\n");
-    //       execv(st[0], parameters[0]);
-    //
-    //     } else {
-    //       wait(&result);
-    //     }
-    //   }
-    // } else {
-
-
-
-    // if (file_exist(st[0])) {
-    //     int writepipe[2] = {-1, -1},
-    //     readpipe[2]  = {-1, -1};
-    //     pid_t result;
-    //
-    //     writepipe[0] = -1;
-    //
-    //     #define PARENT_READ   readpipe[0]
-    //     #define CHILD_WRITE   readpipe[1]
-    //     #define CHILD_READ    writepipe[0]
-    //     #define PARENT_WRITE  writepipe[1]
-    //
-    //     result = fork();
-    //     if(result == 0) {
-    //       close(PARENT_WRITE);
-    //       close(PARENT_READ);
-    //
-    //       dup2(CHILD_READ, 0);
-    //       close(CHILD_READ);
-    //       dup2(CHILD_WRITE, 1);
-    //       close(CHILD_WRITE);
-    //
-    //       execv(st[0], parameters[0]);
-    //     } else {
-    //       close(CHILD_READ);
-    //       close(CHILD_WRITE);
-    //
-    //       wait(&result);
-    //     }
-    //   }
-
-    printf("blarg");
-
+    //check if the files_exist
     if (files_exist(st, pipes)) {
       int i;
       pid_t result;
+
+      //create pipes
       int in, fd [2];
       in =0;
+
+      //begin executing commands
       result = fork();
       if (result == 0) {
-        /* code */
 
-      for (i = 0; i < pipes; i++) {
-        pipe(fd);
+        //is a pipe needed? and how many
+        for (i = 0; i < pipes; i++) {
+          pipe(fd);
 
-        if ((result=fork()) ==0) {
-          if ((in != 0)) {
-            dup2(in, 0);
-            close(in);
+          //create more branches for children
+          if ((result=fork()) ==0) {
+
+            //child close input pipe
+            if ((in != 0)) {
+              dup2(in, 0);
+              close(in);
+            }
+
+            //parents close write pipe
+            if(fd[1] != 1) {
+              dup2(fd[1], 1);
+              close(fd[1]);
+            }
+
+            //execute piped commands
+            execv(st[i], parameters[i]);
+          }else {
+            wait(&result);
           }
 
-          if(fd[1] != 1) {
-            dup2(fd[1], 1);
-            close(fd[1]);
-          }
+          //close write pipe
+          close(fd [1]);
 
-          execv(st[i], parameters[i]);
-        }else {
-          wait(&result);
+          //direct output to input for next child
+          in = fd [0];
         }
+        //set stdin for final command
+        if (in != 0) {
+          dup2(in, 0);
+        }
+        //close pipe
+        close(fd[0]);
 
-        close(fd [1]);
-
-        in = fd [0];
-      }
-      if (in != 0) {
-        dup2(in, 0);
-      }
-      close(fd[0]);
-
-      execv(st[i], parameters[i]);
-    } else {
-      wait(&result);
+        //execute final command
+        execv(st[i], parameters[i]);
+      } else {
+        wait(&result);
       }
     }
-
 
     printf("Dat Bash $");
   }
