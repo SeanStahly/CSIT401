@@ -46,21 +46,19 @@ public class MemoryManager
     public void release(int handle)
     {
         int start =handle;  //declare start for the new "free" block
-        synchronized (free) {
-            for (Integer i : free.keySet()) {
-                if (free.get(i) != null && free.get(i).getEnd() == handle) { //check if there is a predecessor to the block
-                    start = i;  //update start if a predecessor exists
-                    free.remove(i); //remove the predecessor
-                    break;
-                }
-            }
-        }
         int handleEnd = -1;
         synchronized (used) {
             handleEnd = used.get(handle).getEnd();
         }
         if (handleEnd >= 0) {
             synchronized (free) {
+                for (Integer i : free.keySet()) {
+                    if (free.get(i) != null && free.get(i).getEnd() == handle) { //check if there is a predecessor to the block
+                        start = i;  //update start if a predecessor exists
+                        free.remove(i); //remove the predecessor
+                        break;
+                    }
+                }
                 int end = free.containsKey(handleEnd) ? free.get(handleEnd).getEnd() : handleEnd; //get the end of memory area, whether it is handles block or a block afterwards
                 if (handleEnd != end) {
                     free.remove(handleEnd); //remove block immediately following
